@@ -17,8 +17,7 @@ quasar dev
 ### Deploy
 
 ```bash
-quasar build
-surge dist/spa backslash.surge.sh
+quasar build && surge dist/spa backslash.surge.sh
 backslash.surge.sh
 bob@narro.app
 ```
