@@ -17,21 +17,34 @@ Vue.use(Vuex);
 export default function(/* { ssrContext } */) {
   const Store = new Vuex.Store({
     state: {
-      footerText: "backslash"
+      footerText: "backslash",
+      history: []
     },
     getters: {
       getFooterText(state) {
         return state.footerText;
+      },
+      getHistory(state) {
+        return state.history;
       }
     },
     mutations: {
       SET_FOOTER(state, value) {
         state.footerText = value;
+      },
+      SET_HISTORY(state, value) {
+        state.history = value;
       }
     },
     actions: {
       setFooter({ commit }, value) {
         commit("SET_FOOTER", value);
+      },
+      setHistory({ commit, getters }, value) {
+        const existingHistory = [];
+        getters.getHistory.forEach(entry => existingHistory.push(entry));
+        existingHistory.unshift(value);
+        commit("SET_HISTORY", existingHistory);
       }
     }
   });

@@ -1,43 +1,49 @@
 <template>
   <q-page class="flex flex-center" v-on:keypress="keypressHandler">
-    <section>
-      <q-input
-        style="font-size: 2rem"
-        size="large"
-        v-if="showing"
-        id="input"
-        rounded
-        outlined
-        v-model="newInput"
-        autofocus
-        @keyup="setTextInput"
-      >
-        <template v-slot:append>
-          <q-avatar>
-            <img src="~assets/backslash-logo.png" />
-          </q-avatar>
-        </template>
-      </q-input>
-      <section class="start">
-        <p>{{ !showing ? "Press / to start" : "" }}</p>
-        <p>{{ showing ? "\`Shift\` + \`Space\` to toggle" : "" }}</p>
-        <p>
-          {{
-            showing && containsKeyword !== "help"
-              ? "Type \`help\` for assistance"
-              : ""
-          }}
-        </p>
-        <p>
-          {{
-            showing && containsKeyword !== "list"
-              ? "Type \`list\` for commands"
-              : ""
-          }}
-        </p>
-        <p>{{ showing ? "Press \`esc\` to close" : "" }}</p>
-      </section>
+    <div class="row" style="width: 100%">
+      <div class="col-6 offset-3">
+        <q-input
+          :label="selectedFeature"
+          style="font-size: 2rem"
+          size="large"
+          v-if="showing"
+          id="input"
+          rounded
+          outlined
+          v-model="newInput"
+          autofocus
+          @keyup="setTextInput"
+        >
+          <template v-slot:append>
+            <q-avatar>
+              <img src="~assets/backslash-logo.png" />
+            </q-avatar>
+          </template>
+        </q-input>
+      </div>
+    </div>
+    <div class="row">
+      <p>{{ !showing ? "Press / to start" : "" }}</p>
       <section v-if="containsKeyword === 'help'">
+        <section v-show="showing" class="col-auto" full-width>
+          <p>{{ showing ? "\`Shift\` + \`Space\` to toggle" : "" }}</p>
+          <p>
+            {{
+              showing && containsKeyword !== "help"
+                ? "Type \`help\` for assistance"
+                : ""
+            }}
+          </p>
+          <p>
+            {{
+              showing && containsKeyword !== "list"
+                ? "Type \`list\` for commands"
+                : ""
+            }}
+          </p>
+          <p>{{ showing ? "Press \`esc\` to close" : "" }}</p>
+          <!-- </section> -->
+        </section>
         <p><strong>Modifier Key:</strong>{{ " " }} <code>shift</code></p>
         <strong>Special Keys:</strong>{{ " " }}
         <q-item
@@ -48,7 +54,7 @@
           :key="item.key"
         >
           <q-item-section>
-            <q-item><q-icon :name="item.icon" size="md"/></q-item>
+            <q-item-label><q-icon :name="item.icon" size="md"/></q-item-label>
             <q-item-label>{{ item.key }} - {{ item.action }}</q-item-label>
             <q-item-label caption>{{ item.description }}</q-item-label>
           </q-item-section>
@@ -63,7 +69,7 @@
           </q-item-section>
         </q-item>
       </section>
-    </section>
+    </div>
   </q-page>
 </template>
 
@@ -109,6 +115,7 @@ export default {
         ".com",
         "search",
         "mail",
+        "todo",
         "go",
         "do",
         "*",
@@ -125,6 +132,7 @@ export default {
     window.addEventListener("keyup", e => {
       this.keypressHandler(e, "up");
     });
+    window.addEventListener("www_goToUrl", this.goToUrl);
   },
   watch: {
     containsKeyword(newValue, oldValue) {
@@ -135,6 +143,19 @@ export default {
     }
   },
   methods: {
+    www_goToUrl(url) {
+      // window.location = `https://${url}`;
+      window.open(`https://${url}`, "_blank");
+    },
+    executeCommand() {
+      const websiteIndicators = ["www.", ".com"];
+      const isUrl = websiteIndicators.includes(this.selectedFeature);
+      console.log({ isUrl });
+      if (isUrl) {
+        // todo - add more TLDs
+        this.www_goToUrl(this.textInput.trim());
+      }
+    },
     setTextInput() {
       this.textInput = this.filterInput(this.newInput.trim()).trim();
     },
@@ -157,6 +178,9 @@ export default {
     },
     keypressHandler(e, dir) {
       if (this.showing === true) {
+        if (e.key === "Enter") {
+          this.executeCommand();
+        }
         if (e.key === "Escape") {
           this.clearInput(true);
         } else if (this.specialChars.includes(e.key)) {
@@ -195,6 +219,9 @@ export default {
     }
   },
   computed: {
+    selectedFeature() {
+      return this.$store.getters.getFooterText;
+    },
     specialChars() {
       return this.specialCharList.map(specialChar => specialChar.key);
     },
@@ -219,5 +246,11 @@ export default {
 <style>
 li {
   list-style: none;
+}
+section {
+  width: 100%;
+  border: black solid 2px;
+  padding: 5%;
+  /* margin: auto; */
 }
 </style>
