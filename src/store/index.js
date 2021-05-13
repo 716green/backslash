@@ -17,7 +17,7 @@ Vue.use(Vuex);
 export default function(/* { ssrContext } */) {
   const Store = new Vuex.Store({
     state: {
-      footerText: "backslash",
+      footerText: "/backslash/",
       history: []
     },
     getters: {
@@ -30,7 +30,7 @@ export default function(/* { ssrContext } */) {
     },
     mutations: {
       SET_FOOTER(state, value) {
-        state.footerText = value;
+        state.footerText = value === "reset" ? "/backslash/" : value;
       },
       SET_HISTORY(state, value) {
         state.history = value;

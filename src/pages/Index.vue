@@ -1,83 +1,94 @@
 <template>
-  <q-page class="flex flex-center" v-on:keypress="keypressHandler">
-    <div class="row" style="width: 100%">
-      <div class="col-6 offset-3">
-        <q-input
-          :label="selectedFeature"
-          style="font-size: 2rem"
-          size="large"
-          v-if="showing"
-          id="input"
-          rounded
-          outlined
-          v-model="newInput"
-          autofocus
-          @keyup="setTextInput"
-        >
-          <template v-slot:append>
-            <q-avatar>
-              <img src="~assets/backslash-logo.png" />
-            </q-avatar>
-          </template>
-        </q-input>
-      </div>
-    </div>
-    <div class="row">
-      <p>{{ !showing ? "Press / to start" : "" }}</p>
-      <section v-if="containsKeyword === 'help'">
-        <section v-show="showing" class="col-auto" full-width>
-          <p>{{ showing ? "\`Shift\` + \`Space\` to toggle" : "" }}</p>
-          <p>
-            {{
-              showing && containsKeyword !== "help"
-                ? "Type \`help\` for assistance"
-                : ""
-            }}
-          </p>
-          <p>
-            {{
-              showing && containsKeyword !== "list"
-                ? "Type \`list\` for commands"
-                : ""
-            }}
-          </p>
-          <p>{{ showing ? "Press \`esc\` to close" : "" }}</p>
-          <!-- </section> -->
-        </section>
-        <p><strong>Modifier Key:</strong>{{ " " }} <code>shift</code></p>
-        <strong>Special Keys:</strong>{{ " " }}
-        <q-item
-          clickable
-          dense
-          v-ripple
-          v-for="item in specialCharList"
-          :key="item.key"
-        >
-          <q-item-section>
-            <q-item-label><q-icon :name="item.icon" size="md"/></q-item-label>
-            <q-item-label>{{ item.key }} - {{ item.action }}</q-item-label>
-            <q-item-label caption>{{ item.description }}</q-item-label>
-          </q-item-section>
-        </q-item>
-      </section>
+  <div class="q-pa-md" style="height: 100%;">
+    <q-layout
+      style="height: 90vh; margin: 0; padding: 0"
+      view="hHh lpR fFf"
+      container
+      class="shadow-2 rounded-borders"
+    >
+      <!-- style="height: 300px" -->
+      <q-drawer show-if-above v-if="containsKeyword" side="right" bordered>
+        <q-scroll-area class="fit">
+          <q-list>
+            <section v-if="containsKeyword === 'help'">
+              <Hotkeys
+                :showing="showing"
+                :containsKeyword="containsKeyword"
+                :specialCharList="specialCharList"
+              />
+            </section>
 
-      <section v-else-if="containsKeyword === 'list'">
-        <strong>Keywords:</strong>{{ " " }}
-        <q-item clickable dense v-ripple v-for="(item, i) in keywords" :key="i">
-          <q-item-section>
-            <q-item-label>{{ item }}</q-item-label>
-          </q-item-section>
-        </q-item>
-      </section>
-    </div>
-  </q-page>
+            <section class="row" v-else-if="containsKeyword === 'list'">
+              <List :keywords="keywords" />
+            </section>
+
+            <section class="row" v-else-if="isMath(textInput)">
+              <strong> {{ textInput.trim() }} = {{ clean(mathValue) }} </strong>
+            </section>
+            <section class="row" v-else-if="containsKeyword === 'github'">
+              <GitHub
+                :gh_username="gh_username"
+                :gh_search="gh_search"
+                :gh_search_term="gh_search_term"
+                :gh_username_name="gh_username_name"
+              />
+            </section>
+            <section class="row" v-else-if="containsKeyword === 'search'">
+              <Search :search_term="search_term" />
+            </section>
+          </q-list>
+        </q-scroll-area>
+      </q-drawer>
+
+      <q-page-container>
+        <q-page v-on:keypress="keypressHandler">
+          <q-input
+            :label="selectedFeature"
+            v-model="newInput"
+            style="font-size: 1.5rem; width: 50%; display: flex; margin: auto; margin-top: 15px;"
+            size="large"
+            v-if="showing"
+            id="input"
+            rounded
+            outlined
+            autofocus
+            @keyup="setTextInput"
+          >
+            <!-- {{ selectedChar }} -->
+            <template v-slot:append>
+              <q-avatar>
+                <img src="~assets/backslash-logo.png" />
+              </q-avatar>
+            </template>
+          </q-input>
+
+          <p
+            style="text-align: center; justify-content: center; margin-top: 15px"
+          >
+            {{ !showing ? "Press / to start" : "" }}
+          </p>
+        </q-page>
+      </q-page-container>
+    </q-layout>
+    <!-- {{ selectedChar }} -->
+  </div>
 </template>
 
 <script>
+import Hotkeys from "../components/Hotkeys.vue";
+import List from "../components/List.vue";
+import GitHub from "../components/GitHub.vue";
+import Search from "../components/Search.vue";
+
+import { solve, isMath } from "../functions/math";
+
 export default {
   name: "PageIndex",
   data() {
     return {
+      isMath,
+      solve,
+      drawer: false,
       newInput: "",
       textInput: "",
       showing: false,
@@ -118,11 +129,14 @@ export default {
         "todo",
         "go",
         "do",
-        "*",
-        "/",
+        "github",
+        "math",
         "+",
-        "-"
-      ]
+        "-",
+        "*",
+        "/"
+      ],
+      websiteIndicators: ["www.", ".com"]
     };
   },
   created() {
@@ -135,25 +149,69 @@ export default {
     window.addEventListener("www_goToUrl", this.goToUrl);
   },
   watch: {
+    newInput() {
+      if (this.specialChars.includes(this.newInput.trim()[0])) {
+        this.textInput = this.textInput
+          .split(" ")
+          .join("")
+          .split("/")
+          .join("")
+          .split(">")
+          .join("");
+      }
+    },
     containsKeyword(newValue, oldValue) {
-      console.log(oldValue);
+      console.log({ oldValue });
+      if (!newValue) {
+        this.setFooter("reset");
+      }
       if (newValue?.length > 1) {
-        this.$store.dispatch("setFooter", newValue);
+        this.setFooter(newValue);
       }
     }
   },
   methods: {
+    clean(value) {
+      return value
+        .toString()
+        .split("  ")
+        .join(" ")
+        .split("math")
+        .join("")
+        .trim();
+    },
     www_goToUrl(url) {
-      // window.location = `https://${url}`;
       window.open(`https://${url}`, "_blank");
+      this.clearInput({ hide: true });
     },
     executeCommand() {
-      const websiteIndicators = ["www.", ".com"];
-      const isUrl = websiteIndicators.includes(this.selectedFeature);
-      console.log({ isUrl });
-      if (isUrl) {
-        // todo - add more TLDs
-        this.www_goToUrl(this.textInput.trim());
+      const input = this.textInput.trim();
+      // todo - add more TLDs
+      if (this.isUrl) {
+        this.www_goToUrl(input);
+      } else if (input === "mail") {
+        this.www_goToUrl("mail.google.com");
+      } else if (this.textInput.trim().includes("github")) {
+        const searchTerm = this.textInput
+          .replace("github", "")
+          .replace("search", "")
+          .split("  ")
+          .join(" ")
+          .trim()
+          .split(" ")
+          .join("+"); // "node+express"
+        if (this.textInput.trim().includes("search")) {
+          this.www_goToUrl(`github.com/search?q=${searchTerm}`);
+        } else {
+          this.www_goToUrl(`github.com/${searchTerm}`);
+        }
+
+        // alert("GH search");
+      } else if (
+        this.textInput.trim().includes("search") &&
+        !this.textInput.trim().includes("github")
+      ) {
+        this.www_goToUrl("google.com/search?q=" + this.search_term);
       }
     },
     setTextInput() {
@@ -170,7 +228,7 @@ export default {
     },
     focusOnInput(e) {
       if (this.newInput.length === 2) {
-        this.clearInput(false);
+        this.clearInput({ hide: false });
         this.newInput = e.key;
         this.setTextInput(e.key);
       }
@@ -182,23 +240,30 @@ export default {
           this.executeCommand();
         }
         if (e.key === "Escape") {
-          this.clearInput(true);
+          this.clearInput({ hide: true });
         } else if (this.specialChars.includes(e.key)) {
           this.focusOnInput(e);
-        } else if (dir === "down" && e.shiftKey && e.code === "Space") {
-          this.clearInput(true);
-        } else return;
+        }
+        if (dir === "up" && e.shiftKey && e.code === "Space") {
+          this.clearInput({ hide: this.newInput.trim() === "" });
+        }
       } else {
         if (this.specialChars.includes(e.key)) {
           this.showing = true;
-        } else if (dir === "down" && e.shiftKey && e.code === "Space") {
+        } else if (dir === "up" && e.shiftKey && e.code === "Space") {
           this.showing = true;
-          this.clearInput(false);
+          this.clearInput({ hide: false });
         }
       }
     },
-    clearInput(hide) {
-      this.$store.dispatch("setFooter", "backslash");
+    setFooter(value) {
+      this.$store.dispatch("setFooter", value);
+    },
+    clearInput(options) {
+      console.log("clearInput");
+      this.setFooter("/backslash/");
+      const { hide } = options;
+      console.log(hide);
       if (!hide) {
         this.newInput = "";
         this.setTextInput("");
@@ -219,6 +284,68 @@ export default {
     }
   },
   computed: {
+    selectedChar() {
+      if (this.specialChars.includes(this.newInput?.trim()[0])) {
+        return this.newInput?.trim()[0];
+      } else {
+        return "";
+      }
+    },
+    gh_username() {
+      if (
+        this.textInput.split(" ").length > 1 &&
+        this.textInput.indexOf("search") === -1
+      ) {
+        return true;
+      } else return false;
+    },
+    gh_search() {
+      if (
+        this.textInput.split(" ").length > 1 &&
+        this.textInput.indexOf("search") > -1
+      ) {
+        return true;
+      } else return false;
+    },
+    gh_search_term() {
+      if (this.gh_search) {
+        return this.textInput
+          .replace("github", "")
+          .replace("search", "")
+          .trim();
+      } else return null;
+    },
+    gh_username_name() {
+      if (this.gh_username) {
+        return this.textInput.replace("github", "").trim();
+      } else return null;
+    },
+    search_term() {
+      if (this.selectedFeature === "search") {
+        return this.textInput
+          .toLowerCase()
+          .trim()
+          .replace("search", "");
+      } else return null;
+    },
+    isUrl() {
+      return this.websiteIndicators.includes(this.selectedFeature);
+    },
+    mathValue() {
+      if (isMath(this.textInput)) {
+        return this.solve(
+          this.textInput
+            .trim()
+            .split("math")
+            .join("")
+            .split("  ")
+            .join(" ")
+            .trim()
+        );
+      } else {
+        return "";
+      }
+    },
     selectedFeature() {
       return this.$store.getters.getFooterText;
     },
@@ -230,15 +357,24 @@ export default {
         return `${specialChar.key} - ${specialChar.action}`;
       });
     },
+    firstWord() {
+      return this.textInput?.trim().split(" ")[0];
+    },
     containsKeyword() {
       if (this.textInput === "") {
         return false;
       } else {
         return this.keywords.find(keyword => {
-          return this.textInput?.toLowerCase().includes(keyword);
+          return this.firstWord?.toLowerCase().includes(keyword);
         });
       }
     }
+  },
+  components: {
+    Hotkeys,
+    List,
+    GitHub,
+    Search
   }
 };
 </script>
@@ -248,9 +384,12 @@ li {
   list-style: none;
 }
 section {
-  width: 100%;
   border: black solid 2px;
   padding: 5%;
-  /* margin: auto; */
+  margin: 0;
+}
+
+p {
+  margin: 0;
 }
 </style>
