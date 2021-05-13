@@ -6,7 +6,6 @@
       container
       class="shadow-2 rounded-borders"
     >
-      <!-- style="height: 300px" -->
       <q-drawer show-if-above v-if="containsKeyword" side="right" bordered>
         <q-scroll-area class="fit">
           <q-list>
@@ -36,6 +35,13 @@
             <section class="row" v-else-if="containsKeyword === 'search'">
               <Search :search_term="search_term" />
             </section>
+            <section
+              class="row"
+              v-else-if="websiteIndicators.includes(containsKeyword)"
+            >
+              <strong style="margin-right: 5px"> Go to</strong>
+              {{ textInput }}
+            </section>
           </q-list>
         </q-scroll-area>
       </q-drawer>
@@ -54,7 +60,6 @@
             autofocus
             @keyup="setTextInput"
           >
-            <!-- {{ selectedChar }} -->
             <template v-slot:append>
               <q-avatar>
                 <img src="~assets/backslash-logo.png" />
@@ -63,14 +68,29 @@
           </q-input>
 
           <p
+            class="p"
             style="text-align: center; justify-content: center; margin-top: 15px"
           >
             {{ !showing ? "Press / to start" : "" }}
           </p>
+
+          <p class="p">
+            {{
+              showing && textInput !== ""
+                ? "Press [SHIFT] + [SPACE] to clear"
+                : ""
+            }}
+          </p>
+          <p class="p">
+            {{
+              showing && textInput === ""
+                ? "Press [SHIFT] + [SPACE] to toggle"
+                : ""
+            }}
+          </p>
         </q-page>
       </q-page-container>
     </q-layout>
-    <!-- {{ selectedChar }} -->
   </div>
 </template>
 
@@ -79,6 +99,7 @@ import Hotkeys from "../components/Hotkeys.vue";
 import List from "../components/List.vue";
 import GitHub from "../components/GitHub.vue";
 import Search from "../components/Search.vue";
+import { specialCharList, keywords, websiteIndicators } from "../data/lists";
 
 import { solve, isMath } from "../functions/math";
 
@@ -88,55 +109,13 @@ export default {
     return {
       isMath,
       solve,
+      specialCharList,
+      keywords,
+      websiteIndicators,
       drawer: false,
       newInput: "",
       textInput: "",
-      showing: false,
-      specialCharList: [
-        {
-          key: "/",
-          action: "general",
-          description: "access all commands",
-          icon: "mdi-slash-forward-box"
-        },
-        {
-          key: ">",
-          action: "options",
-          description: "create actions or personalize your action page",
-          icon: "mdi-code-greater-than"
-        },
-        {
-          key: "!",
-          action: "action",
-          description: "dispatch an action",
-          icon: "mdi-alert-box"
-        },
-        {
-          key: "?",
-          action: "information",
-          description: "get general information or lookup command information",
-          icon: "mdi-help-box"
-        }
-      ],
-      keywords: [
-        "note",
-        "list",
-        "help",
-        "www.",
-        ".com",
-        "search",
-        "mail",
-        "todo",
-        "go",
-        "do",
-        "github",
-        "math",
-        "+",
-        "-",
-        "*",
-        "/"
-      ],
-      websiteIndicators: ["www.", ".com"]
+      showing: false
     };
   },
   created() {
@@ -260,10 +239,8 @@ export default {
       this.$store.dispatch("setFooter", value);
     },
     clearInput(options) {
-      console.log("clearInput");
       this.setFooter("/backslash/");
       const { hide } = options;
-      console.log(hide);
       if (!hide) {
         this.newInput = "";
         this.setTextInput("");
@@ -391,5 +368,9 @@ section {
 
 p {
   margin: 0;
+}
+
+.p {
+  text-align: center;
 }
 </style>
